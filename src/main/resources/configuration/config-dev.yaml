@@ -1,0 +1,28 @@
+wellsfargo-pgp:
+  privateKeyring: "certificates/WellsFargoPGP2048_priv.asc"
+  id: "wellsfargoDecrypt"
+  fingerprint: "D8CF52A11D9C1348"
+  
+sftp:
+  remoteDirectory: "/local"
+  host: "sftpgatewaydev.oxfordcorp.com"
+  port: "22"
+  username: "wellsfargo"
+
+httpRequest:
+  host: "og-smb-sapi-dev-9631yk.8985us.usa-e1.cloudhub.io"
+  path: "/v1/psft/write"
+  
+alertRequest:
+  path: "/alert"
+  method : "POST"
+  protocol: "HTTP"
+  basePath: "/v1"
+  host: "og-alert-raiser-dev.us-e1.cloudhub.io"
+  port: "80"
+  timeout: "30000"
+  maxConnections: "-1"
+  bufferSize: "1024"
+  reconnection:
+    frequency: "10000"
+    attempts: "3"

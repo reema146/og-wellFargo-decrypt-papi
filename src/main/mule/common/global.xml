@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:tls="http://www.mulesoft.org/schema/mule/tls"
+	xmlns:sftp="http://www.mulesoft.org/schema/mule/sftp"
+	xmlns:file="http://www.mulesoft.org/schema/mule/file"
+	xmlns:crypto="http://www.mulesoft.org/schema/mule/crypto"
+	xmlns:secure-properties="http://www.mulesoft.org/schema/mule/secure-properties" xmlns:http="http://www.mulesoft.org/schema/mule/http"
+	xmlns="http://www.mulesoft.org/schema/mule/core"
+	xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="
+http://www.mulesoft.org/schema/mule/tls http://www.mulesoft.org/schema/mule/tls/current/mule-tls.xsd 
+http://www.mulesoft.org/schema/mule/sftp http://www.mulesoft.org/schema/mule/sftp/current/mule-sftp.xsd 
+http://www.mulesoft.org/schema/mule/file http://www.mulesoft.org/schema/mule/file/current/mule-file.xsd 
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/secure-properties http://www.mulesoft.org/schema/mule/secure-properties/current/mule-secure-properties.xsd
+http://www.mulesoft.org/schema/mule/crypto http://www.mulesoft.org/schema/mule/crypto/current/mule-crypto.xsd">
+	<configuration-properties doc:name="Configuration properties" doc:id="bb05ed8e-c6f9-4f36-b1de-3166badc2ad2" file="configuration\config-${env}.yaml" />
+	<http:request-config name="HTTP_Alert_Request_configuration" doc:name="HTTP Request configuration" doc:id="39fac4c3-409a-469b-95a0-f7d108bd2652" basePath="${alertRequest.basePath}">
+        <http:request-connection protocol="${alertRequest.protocol}" host="${alertRequest.host}" port="${alertRequest.port}" maxConnections="${alertRequest.maxConnections}" connectionIdleTimeout="${alertRequest.timeout}" responseBufferSize="${alertRequest.bufferSize}">
+            <reconnection>
+                <reconnect frequency="${alertRequest.reconnection.frequency}" count="${alertRequest.reconnection.attempts}" />
+            </reconnection>
+            <http:authentication>
+                <http:basic-authentication username="${secure::alertBasicAuth.username}" password="${secure::alertBasicAuth.password}" />
+            </http:authentication>
+        </http:request-connection>
+    </http:request-config>
+    <sftp:config name="SFTP_Config" doc:name="SFTP Config" doc:id="b916352c-2b3f-4d5b-af2f-a2208dd34066" >
+		<sftp:connection host="${sftp.host}" username="${sftp.username}" password="${secure::sftp.password}" port="${sftp.port}"/>
+	</sftp:config>
+    <crypto:pgp-config name="Crypto_Pgp_decrypt" doc:name="Crypto Pgp" doc:id="ad6d8d02-4546-46c0-b178-906876b95f80" privateKeyring="${wellsfargo-pgp.privateKeyring}" >
+		<crypto:pgp-key-infos >
+			<crypto:pgp-asymmetric-key-info keyId="${wellsfargo-pgp.id}" fingerprint="${wellsfargo-pgp.fingerprint}" passphrase="${secure::wellsfargo-pgp.passphrase}"/>
+		</crypto:pgp-key-infos>
+	</crypto:pgp-config>
+		<file:config name="File_Config" doc:name="File Config" doc:id="58480600-3eaa-443e-8068-e726c5838792" >
+		<file:connection workingDir="C:\Users\reemagupta\Oxford\sftp-decrypt\outbound\wellsfardo" />
+	</file:config>
+	<file:config name="File_Config1" doc:name="File Config" doc:id="032634ca-4714-4e89-928e-238479671c61" >
+		<file:connection workingDir="C:\Users\reemagupta\Oxford\sftp-decrypt\outbound\WellsFargoExpenses" />
+	</file:config>
+	<secure-properties:config name="Secure_Properties_Config" doc:name="Secure Properties Config" doc:id="b9b9e2ec-a506-4413-8331-bcee55d81693" file="configuration/secure-config-${env}.yaml" key="${key}" />
+	<global-property doc:name="Global Property" doc:id="9e970353-8493-4867-8e26-654a4215484b" name="env" value="local" />
+	<global-property doc:name="Global Property" doc:id="45699a72-87db-44f6-b61d-12a9421ba105" name="key" value="oxfordpass@12345" />
+	<http:request-config name="HTTP_Request_configuration" doc:name="HTTP Request configuration" doc:id="f1032113-331b-43c5-a9bd-49ec76954152" >
+		<http:request-connection protocol="HTTPS" host="${httpRequest.host}" >
+			<tls:context >
+				<tls:trust-store insecure="true" />
+			</tls:context>
+		</http:request-connection>
+	</http:request-config>
+</mule>
