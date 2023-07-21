@@ -1,0 +1,96 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:tls="http://www.mulesoft.org/schema/mule/tls" xmlns:http="http://www.mulesoft.org/schema/mule/http"
+	xmlns:sftp="http://www.mulesoft.org/schema/mule/sftp"
+	xmlns:crypto="http://www.mulesoft.org/schema/mule/crypto" xmlns:file="http://www.mulesoft.org/schema/mule/file" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/file http://www.mulesoft.org/schema/mule/file/current/mule-file.xsd
+http://www.mulesoft.org/schema/mule/crypto http://www.mulesoft.org/schema/mule/crypto/current/mule-crypto.xsd
+http://www.mulesoft.org/schema/mule/sftp http://www.mulesoft.org/schema/mule/sftp/current/mule-sftp.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/tls http://www.mulesoft.org/schema/mule/tls/current/mule-tls.xsd">
+	
+
+	
+	
+	<flow name="psft-wellsfargo-SFTP-decrypt" doc:id="1fbdecef-edac-4de3-b0d5-8a9ed7fdf0ca" >
+		<sftp:listener doc:name="On New or Updated File" doc:id="996cbbba-7dc9-413a-87be-9915945bb34a" config-ref="SFTP_Config" directory="${sftp.remoteDirectory}" autoDelete="true">
+			<scheduling-strategy >
+				<fixed-frequency />
+			</scheduling-strategy>
+		</sftp:listener>
+		<logger level="INFO" doc:name="Log Start" doc:id="c37291ad-18ba-4886-a8fe-c01ab06754da" message="#[output application/json&#10;---&#10;{&#10;	&quot;correlationId&quot;: correlationId,&#10;	&quot;logLevel&quot;: &quot;INFO&quot;,&#10;	&quot;applicationName&quot;: app.name,&#10;	&quot;logMessage&quot;: &quot;File Recieved&quot;,&#10;	&quot;logTimeStamp&quot;: (now() &gt;&gt; 'PST') as DateTime as String {format: &quot;dd-MM-yyyy HH:mm:ss.SSS&quot;},&#10;}]" />
+		<set-variable value="#[payload]" doc:name="originalPayload" doc:id="eaa7817a-145e-4b0c-98f0-ee297e1aa8e5" variableName="originalPayload"/>
+		<set-variable value="#[attributes.fileName]" doc:name="Set Variable" doc:id="81a2de3a-0bd4-40fa-8d94-3722a99c9284" variableName="filename"/>
+		<logger level="INFO" doc:name="wellFargoArchive Start" doc:id="f1eada13-72cc-4860-8ade-6a4386fbf443" message="#[output application/json&#10;---&#10;{&#10;	&quot;correlationId&quot;: correlationId,&#10;	&quot;logLevel&quot;: &quot;INFO&quot;,&#10;	&quot;applicationName&quot;: app.name,&#10;	&quot;logMessage&quot;: &quot;decrypting File and sending it to wellfargo Archive directory&quot;,&#10;	&quot;logTimeStamp&quot;: (now() &gt;&gt; 'PST') as DateTime as String {format: &quot;dd-MM-yyyy HH:mm:ss.SSS&quot;},&#10;}]" />
+		<crypto:pgp-decrypt doc:name="Pgp decrypt" doc:id="f10f75bb-4d34-4190-92c0-e3dae5bc33ae" config-ref="Crypto_Pgp_decrypt">
+			<crypto:content ><![CDATA[#[vars.originalPayload]]]></crypto:content>
+		</crypto:pgp-decrypt>
+		<set-variable value='#[vars.filename ++ "-"++ now() as  String {format: "yyyyMMdd_HHmmss"}]' doc:name="Set Variable" doc:id="9431ba96-582b-4ce5-89bd-ca3943d53ca3" variableName="filename"/>
+		<http:request method="POST" doc:name="RequestWellsfargoExpenseArchives" doc:id="48c052d6-4979-4c35-adff-186aa48cbc12" config-ref="HTTP_Request_configuration" path="${httpRequest.path}" outputMimeType="multipart/form-data">
+			<http:body ><![CDATA[#[%dw 2.0
+output multipart/form-data
+---
+{
+    "parts":{
+        (vars.filename):{
+            "headers":{
+            	"Content-Disposition":{
+                     "name": vars.filename,
+            		"filename": vars.filename,
+            	},
+                "Content-Type": "text/plain"
+            },
+            "content": payload.^raw
+        }
+    }
+}]]]></http:body>
+			<http:headers ><![CDATA[#[output application/java
+---
+{
+	"Content-Type": "multipart/form-data",
+	"Authorization": "Basic b3hmb3JkOm94Zm9yZA=="
+}]]]></http:headers>
+			<http:query-params ><![CDATA[#[output application/java
+---
+{
+	"path" : "MulesoftDevelopment\WellsFargoExpense\Archives",
+	"filename" : vars.filename 
+	}]]]></http:query-params>
+		</http:request>
+		<logger level="INFO" doc:name="wellFargoExpense Start" doc:id="d3c1dd0e-85af-47c9-997d-c5ac4ce686c9" message="#[output application/json&#10;---&#10;{&#10;	&quot;correlationId&quot;: correlationId,&#10;	&quot;logLevel&quot;: &quot;INFO&quot;,&#10;	&quot;applicationName&quot;: app.name,&#10;	&quot;logMessage&quot;: &quot;decrypted File send to wellsfargoExpense Folder&quot;,&#10;	&quot;logTimeStamp&quot;: (now() &gt;&gt; 'PST') as DateTime as String {format: &quot;dd-MM-yyyy HH:mm:ss.SSS&quot;},&#10;}]" />
+		<set-variable value='#["WF_CC_TRAN.TXT"]' doc:name="Set Variable" doc:id="895d0dac-110e-4722-a088-67396d47efba" variableName="filename"/>
+		<http:request method="POST" doc:name="RequestWellsfrago" doc:id="880474a7-f088-439b-81ab-7a01b4c5edfe" config-ref="HTTP_Request_configuration" path="${httpRequest.path}" outputMimeType="multipart/form-data">
+			<http:body><![CDATA[#[%dw 2.0
+output multipart/form-data
+---
+{
+    "parts":{
+        (vars.filename):{
+            "headers":{
+            	"Content-Disposition":{
+                     "name": vars.filename,
+            		"filename": vars.filename,
+            	},
+                "Content-Type": "text/plain"
+            },
+            "content": payload.^raw
+        }
+    }
+}]]]></http:body>
+			<http:headers><![CDATA[#[output application/java
+---
+{
+	"Content-Type": "multipart/form-data",
+	"Authorization": "Basic b3hmb3JkOm94Zm9yZA=="
+}]]]></http:headers>
+			<http:query-params><![CDATA[#[output application/java
+---
+{
+	"path" : "MulesoftDevelopment\WellsFargoExpense",
+	"filename" : vars.filename 
+	}]]]></http:query-params>
+		</http:request>
+		<logger level="INFO" doc:name="Log End" doc:id="6a344542-778e-42af-a785-2db0fa3b3842" message="#[output application/json&#10;---&#10;{&#10;	&quot;correlationId&quot;: correlationId,&#10;	&quot;logLevel&quot;: &quot;INFO&quot;,&#10;	&quot;applicationName&quot;: app.name,&#10;	&quot;logMessage&quot;: &quot;File Processing Completed Successfully&quot;,&#10;	&quot;logTimeStamp&quot;: (now() &gt;&gt; 'PST') as DateTime as String {format: &quot;dd-MM-yyyy HH:mm:ss.SSS&quot;},&#10;}]" />
+		<error-handler ref="global-error-handler" />
+	</flow>
+</mule>

@@ -1,0 +1,16 @@
+%dw 2.0
+
+type auto_70f2d362_339d_4a49_9d01_201632933451_Input_Payload = {|
+  errorDetails: {|
+    errorCode: Number, 
+    errortype: String | Null, 
+    errorIdentifier: String, 
+    errorDescription: String, 
+    correlationId: String, 
+    appName: String | Null, 
+    flowName: String, 
+    componentName: String, 
+    timestamp: String
+  |}
+|}
+
