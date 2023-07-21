@@ -1,0 +1,13 @@
+alertRequest:
+  path: "/alert"
+  method : "POST"
+  protocol: "HTTP"
+  basePath: "/v1"
+  host: "og-alert-raiser-test.us-e1.cloudhub.io"
+  port: "80"
+  timeout: "30000"
+  maxConnections: "-1"
+  bufferSize: "1024"
+  reconnection:
+    frequency: "10000"
+    attempts: "3"
